@@ -1550,14 +1550,20 @@ function authSubmit(){
     if(!id){errEl.textContent='Enter your username, email or phone.';return}
     if(!pw){errEl.textContent='Enter your password.';return}
     btn.textContent='Logging in…';btn.disabled=true;
+    var loginTimeout=setTimeout(function(){
+      errEl.textContent='Connection timed out. Make sure Firestore is enabled in Firebase console.';
+      btn.textContent='Log In';btn.disabled=false;
+    },8000);
     findAccount(id).then(function(acc){
-      if(!acc)throw new Error('No account found with those details.');
+      clearTimeout(loginTimeout);
+      if(!acc)throw new Error('No account found. Create an account first.');
       return hashPw(pw).then(function(hash){
         if(hash!==acc.hash)throw new Error('Wrong password.');
         btn.textContent='Log In';btn.disabled=false;
         startSession(acc.username);
       });
     }).catch(function(err){
+      clearTimeout(loginTimeout);
       errEl.textContent=err.message||'Something went wrong. Check your connection.';
       btn.textContent='Log In';btn.disabled=false;
     });
@@ -1586,22 +1592,54 @@ function logout(){
   setAuthMode('login');
 }
 
-function initAuth(){
-  var savedUser=sessionStorage.getItem('af2_user');
-  if(savedUser){
-    db.collection('af2_accounts').doc(savedUser.toLowerCase()).get().then(function(doc){
-      if(doc.exists){startSession(savedUser);}
-      else{setAuthMode('login');document.getElementById('auth-screen').style.display='flex';}
-    }).catch(function(){setAuthMode('login');document.getElementById('auth-screen').style.display='flex';});
-  } else {
-    db.collection('af2_accounts').limit(1).get().then(function(snap){
-      setAuthMode(snap.empty?'create':'login');
-      document.getElementById('auth-screen').style.display='flex';
-    }).catch(function(){
-      setAuthMode('create');
-      document.getElementById('auth-screen').style.display='flex';
+// ── Migrate old localStorage data to Firestore (one-time) ──
+function migrateFromLocalStorage(){
+  var oldAccounts=JSON.parse(localStorage.getItem('af2_accounts')||'null');
+  if(!oldAccounts||!oldAccounts.length)return Promise.resolve();
+  var batch=db.batch();
+  oldAccounts.forEach(function(acc){
+    batch.set(db.collection('af2_accounts').doc(acc.username.toLowerCase()),acc,{merge:true});
+  });
+  return batch.commit().then(function(){
+    return Promise.all(oldAccounts.map(function(acc){
+      var c=JSON.parse(localStorage.getItem('af2_cars_'+acc.username)||'null');
+      var p=JSON.parse(localStorage.getItem('af2_parts_'+acc.username)||'null');
+      var s=JSON.parse(localStorage.getItem('af2_settings_'+acc.username)||'null');
+      if(!c&&!p)return Promise.resolve();
+      return db.collection('af2_userdata').doc(acc.username).set({
+        cars:c||[],parts:p||[],settings:s||{}
+      },{merge:true});
+    }));
+  }).then(function(){
+    // Clean up old keys
+    localStorage.removeItem('af2_accounts');
+    oldAccounts.forEach(function(acc){
+      localStorage.removeItem('af2_cars_'+acc.username);
+      localStorage.removeItem('af2_parts_'+acc.username);
+      localStorage.removeItem('af2_settings_'+acc.username);
     });
-  }
+    console.log('Migrated '+oldAccounts.length+' account(s) to Firestore.');
+  }).catch(function(e){console.warn('Migration error:',e);});
+}
+
+function initAuth(){
+  migrateFromLocalStorage().then(function(){
+    var savedUser=sessionStorage.getItem('af2_user');
+    if(savedUser){
+      db.collection('af2_accounts').doc(savedUser.toLowerCase()).get().then(function(doc){
+        if(doc.exists){startSession(savedUser);}
+        else{setAuthMode('login');document.getElementById('auth-screen').style.display='flex';}
+      }).catch(function(){setAuthMode('login');document.getElementById('auth-screen').style.display='flex';});
+    } else {
+      db.collection('af2_accounts').limit(1).get().then(function(snap){
+        setAuthMode(snap.empty?'create':'login');
+        document.getElementById('auth-screen').style.display='flex';
+      }).catch(function(){
+        setAuthMode('create');
+        document.getElementById('auth-screen').style.display='flex';
+      });
+    }
+  });
 }
 
 initAuth();
