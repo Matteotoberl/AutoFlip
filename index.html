@@ -857,16 +857,22 @@ textarea{resize:vertical;min-height:64px}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-// ── Firebase + Firestore ──
-var fbApp=firebase.initializeApp({
-  apiKey:"AIzaSyA6PpHMH2SLGCyKFFhBJ4SjoCcfYS4pot4",
-  authDomain:"auto-flip-274e5.firebaseapp.com",
-  projectId:"auto-flip-274e5",
-  storageBucket:"auto-flip-274e5.firebasestorage.app",
-  messagingSenderId:"310016649945",
-  appId:"1:310016649945:web:1d1d5af9144d363fbeecc8"
-});
-var db=firebase.firestore(fbApp);
+// ── Firebase + Firestore (with localStorage fallback) ──
+var db=null,useFirestore=false;
+try{
+  var fbApp=firebase.initializeApp({
+    apiKey:"AIzaSyA6PpHMH2SLGCyKFFhBJ4SjoCcfYS4pot4",
+    authDomain:"auto-flip-274e5.firebaseapp.com",
+    projectId:"auto-flip-274e5",
+    storageBucket:"auto-flip-274e5.firebasestorage.app",
+    messagingSenderId:"310016649945",
+    appId:"1:310016649945:web:1d1d5af9144d363fbeecc8"
+  });
+  db=firebase.firestore(fbApp);
+  useFirestore=true;
+}catch(e){console.warn('Firebase unavailable, using localStorage:',e.message);}
+function _timeout(ms){return new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'))},ms);})}
+function _fsOp(promise){return Promise.race([promise,_timeout(6000)]).catch(function(e){if(e.message==='timeout'||!useFirestore)throw e;throw e;});}
 
 // ── IndexedDB docs ──
 var DocDB=(function(){
@@ -881,16 +887,34 @@ var DocDB=(function(){
 
 // ── Data ──
 var cars=[],parts=[],settings={};
-function sv(k){
+function sv(){
   if(!currentUser)return;
-  db.collection('af2_userdata').doc(currentUser).set({cars:cars,parts:parts,settings:settings})
-    .catch(function(e){console.warn('Save error:',e)});
+  if(useFirestore&&db){
+    db.collection('af2_userdata').doc(currentUser).set({cars:cars,parts:parts,settings:settings})
+      .catch(function(e){console.warn('Firestore save failed, writing localStorage:',e);_lsSave(currentUser);});
+  } else {_lsSave(currentUser);}
+}
+function _lsSave(u){
+  try{localStorage.setItem('af2_cars_'+u,JSON.stringify(cars));
+    localStorage.setItem('af2_parts_'+u,JSON.stringify(parts));
+    localStorage.setItem('af2_settings_'+u,JSON.stringify(settings));}catch(e){}
 }
 function loadUserData(username){
-  return db.collection('af2_userdata').doc(username).get().then(function(doc){
-    if(doc.exists){var d=doc.data();cars=d.cars||[];parts=d.parts||[];settings=d.settings||{};}
-    else{cars=[];parts=[];settings={};}
-  });
+  if(useFirestore&&db){
+    return Promise.race([
+      db.collection('af2_userdata').doc(username).get(),
+      _timeout(6000)
+    ]).then(function(doc){
+      if(doc&&doc.exists){var d=doc.data();cars=d.cars||[];parts=d.parts||[];settings=d.settings||{};}
+      else{_lsLoad(username);}
+    }).catch(function(){_lsLoad(username);return Promise.resolve();});
+  }
+  _lsLoad(username);return Promise.resolve();
+}
+function _lsLoad(u){
+  cars=JSON.parse(localStorage.getItem('af2_cars_'+u)||'[]');
+  parts=JSON.parse(localStorage.getItem('af2_parts_'+u)||'[]');
+  settings=JSON.parse(localStorage.getItem('af2_settings_'+u)||'{}');
 }
 var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2)};
 var fmt=function(v){return'£'+(parseFloat(v)||0).toFixed(2)};
@@ -1743,18 +1767,34 @@ function setAuthMode(mode){
   }
 }
 
+function _lsAccounts(){return JSON.parse(localStorage.getItem('af2_accounts')||'[]');}
+function _lsSaveAccounts(a){localStorage.setItem('af2_accounts',JSON.stringify(a));}
+
 function findAccount(id){
-  var idLower=id.toLowerCase();
-  var idNorm=normalisePhone(id);
-  return db.collection('af2_accounts').doc(idLower).get().then(function(doc){
-    if(doc.exists)return doc.data();
-    return db.collection('af2_accounts').where('email','==',idLower).limit(1).get().then(function(snap){
-      if(!snap.empty)return snap.docs[0].data();
-      return db.collection('af2_accounts').where('phone','==',idNorm).limit(1).get().then(function(snap2){
-        return snap2.empty?null:snap2.docs[0].data();
-      });
+  var idLower=id.toLowerCase(),idNorm=normalisePhone(id);
+  if(useFirestore&&db){
+    return Promise.race([
+      db.collection('af2_accounts').doc(idLower).get().then(function(doc){
+        if(doc.exists)return doc.data();
+        return db.collection('af2_accounts').where('email','==',idLower).limit(1).get().then(function(snap){
+          if(!snap.empty)return snap.docs[0].data();
+          return db.collection('af2_accounts').where('phone','==',idNorm).limit(1).get().then(function(snap2){
+            return snap2.empty?null:snap2.docs[0].data();
+          });
+        });
+      }),
+      _timeout(6000)
+    ]).catch(function(){
+      // Firestore failed — try localStorage
+      return _lsFindAccount(idLower,idNorm);
     });
-  });
+  }
+  return Promise.resolve(_lsFindAccount(idLower,idNorm));
+}
+function _lsFindAccount(idLower,idNorm){
+  return _lsAccounts().find(function(a){
+    return a.username.toLowerCase()===idLower||a.email===idLower||normalisePhone(a.phone)===idNorm;
+  })||null;
 }
 
 function authSubmit(){
@@ -1774,22 +1814,35 @@ function authSubmit(){
     if(!pw||pw.length<6){errEl.textContent='Password must be at least 6 characters.';return}
     if(pw!==pw2){errEl.textContent='Passwords do not match.';return}
     btn.textContent='Creating…';btn.disabled=true;
-    db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
-      if(doc.exists)throw new Error('Username already taken.');
-      return db.collection('af2_accounts').where('email','==',email).limit(1).get();
-    }).then(function(snap){
-      if(!snap.empty)throw new Error('Email already registered.');
-      return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
-    }).then(function(snap){
-      if(!snap.empty)throw new Error('Phone number already registered.');
-      return hashPw(pw);
-    }).then(function(hash){
-      return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash});
+    hashPw(pw).then(function(hash){
+      if(useFirestore&&db){
+        return Promise.race([
+          db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
+            if(doc.exists)throw new Error('Username already taken.');
+            return db.collection('af2_accounts').where('email','==',email).limit(1).get();
+          }).then(function(snap){
+            if(!snap.empty)throw new Error('Email already registered.');
+            return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
+          }).then(function(snap){
+            if(!snap.empty)throw new Error('Phone already registered.');
+            return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash});
+          }),
+          _timeout(6000)
+        ]).catch(function(err){
+          if(err.message==='timeout'){
+            // Firestore timed out — save to localStorage
+            _lsCreateAccount(username,email,phone,hash);return;
+          }
+          throw err;
+        });
+      } else {
+        _lsCreateAccount(username,email,phone,hash);
+      }
     }).then(function(){
       btn.textContent='Create Account';btn.disabled=false;
       startSession(username);
     }).catch(function(err){
-      errEl.textContent=err.message||'Something went wrong. Check your connection.';
+      errEl.textContent=err.message||'Something went wrong.';
       btn.textContent='Create Account';btn.disabled=false;
     });
 
@@ -1839,6 +1892,15 @@ function startSession(username){
   });
 }
 
+function _lsCreateAccount(username,email,phone,hash){
+  var accounts=_lsAccounts();
+  if(accounts.some(function(a){return a.username.toLowerCase()===username.toLowerCase()||a.email===email||normalisePhone(a.phone)===phone;})){
+    throw new Error('Username, email or phone already registered.');
+  }
+  accounts.push({username:username,email:email,phone:phone,hash:hash});
+  _lsSaveAccounts(accounts);
+}
+
 function logout(){
   if(!confirm('Log out?'))return;
   sessionStorage.removeItem('af2_user');
@@ -1846,57 +1908,65 @@ function logout(){
   cars=[];parts=[];settings={};
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('auth-error').textContent='';
-  setAuthMode('login');
+  setAuthMode(_lsAccounts().length?'login':'create');
 }
+
+function _showAuth(mode){setAuthMode(mode);document.getElementById('auth-screen').style.display='flex';}
 
 // ── Migrate old localStorage data to Firestore (one-time) ──
 function migrateFromLocalStorage(){
+  if(!useFirestore||!db)return Promise.resolve();
   var oldAccounts=JSON.parse(localStorage.getItem('af2_accounts')||'null');
   if(!oldAccounts||!oldAccounts.length)return Promise.resolve();
   var batch=db.batch();
   oldAccounts.forEach(function(acc){
     batch.set(db.collection('af2_accounts').doc(acc.username.toLowerCase()),acc,{merge:true});
   });
-  return batch.commit().then(function(){
+  return Promise.race([batch.commit(),_timeout(6000)]).then(function(){
     return Promise.all(oldAccounts.map(function(acc){
       var c=JSON.parse(localStorage.getItem('af2_cars_'+acc.username)||'null');
       var p=JSON.parse(localStorage.getItem('af2_parts_'+acc.username)||'null');
       var s=JSON.parse(localStorage.getItem('af2_settings_'+acc.username)||'null');
       if(!c&&!p)return Promise.resolve();
-      return db.collection('af2_userdata').doc(acc.username).set({
-        cars:c||[],parts:p||[],settings:s||{}
-      },{merge:true});
+      return db.collection('af2_userdata').doc(acc.username).set({cars:c||[],parts:p||[],settings:s||{}},{merge:true});
     }));
   }).then(function(){
-    // Clean up old keys
     localStorage.removeItem('af2_accounts');
     oldAccounts.forEach(function(acc){
       localStorage.removeItem('af2_cars_'+acc.username);
       localStorage.removeItem('af2_parts_'+acc.username);
       localStorage.removeItem('af2_settings_'+acc.username);
     });
-    console.log('Migrated '+oldAccounts.length+' account(s) to Firestore.');
-  }).catch(function(e){console.warn('Migration error:',e);});
+  }).catch(function(e){console.warn('Migration skipped:',e.message);});
 }
 
 function initAuth(){
   migrateFromLocalStorage().then(function(){
     var savedUser=sessionStorage.getItem('af2_user');
     if(savedUser){
-      db.collection('af2_accounts').doc(savedUser.toLowerCase()).get().then(function(doc){
-        if(doc.exists){startSession(savedUser);}
-        else{setAuthMode('login');document.getElementById('auth-screen').style.display='flex';}
-      }).catch(function(){setAuthMode('login');document.getElementById('auth-screen').style.display='flex';});
+      var check;
+      if(useFirestore&&db){
+        check=Promise.race([
+          db.collection('af2_accounts').doc(savedUser.toLowerCase()).get().then(function(doc){return doc.exists;}),
+          _timeout(5000)
+        ]).catch(function(){return !!_lsFindAccount(savedUser.toLowerCase(),normalisePhone(savedUser));});
+      } else {
+        check=Promise.resolve(!!_lsFindAccount(savedUser.toLowerCase(),normalisePhone(savedUser)));
+      }
+      check.then(function(ok){ok?startSession(savedUser):_showAuth('login');});
     } else {
-      db.collection('af2_accounts').limit(1).get().then(function(snap){
-        setAuthMode(snap.empty?'create':'login');
-        document.getElementById('auth-screen').style.display='flex';
-      }).catch(function(){
-        setAuthMode('create');
-        document.getElementById('auth-screen').style.display='flex';
-      });
+      var modeCheck;
+      if(useFirestore&&db){
+        modeCheck=Promise.race([
+          db.collection('af2_accounts').limit(1).get().then(function(s){return s.empty?'create':'login';}),
+          _timeout(5000)
+        ]).catch(function(){return _lsAccounts().length?'login':'create';});
+      } else {
+        modeCheck=Promise.resolve(_lsAccounts().length?'login':'create');
+      }
+      modeCheck.then(function(mode){_showAuth(mode);});
     }
-  });
+  }).catch(function(){_showAuth('create');});
 }
 
 initAuth();
