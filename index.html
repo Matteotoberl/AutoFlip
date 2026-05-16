@@ -285,10 +285,11 @@ textarea{resize:vertical;min-height:64px}
   .rpt-footer{grid-template-columns:1fr}
 
   /* AUTH */
-  #auth-screen{padding:16px;align-items:flex-start;padding-top:50px}
+  #auth-screen{padding:16px;align-items:flex-start;padding-top:40px;overflow-y:auto}
   .auth-box{max-width:100%}
   .auth-logo{font-size:40px}
-  .auth-sub{margin-bottom:24px}
+  .auth-sub{margin-bottom:20px}
+  #auth-loading{margin-bottom:20px;font-size:11px}
   .auth-card{padding:22px 18px}
   .auth-field input{font-size:16px;padding:12px 14px}
   .auth-btn{padding:15px;font-size:16px}
@@ -300,22 +301,23 @@ textarea{resize:vertical;min-height:64px}
 }
 
 /* ── AUTH SCREEN ── */
-#auth-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+#auth-screen{position:fixed;inset:0;z-index:9999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px}
 .auth-box{width:100%;max-width:420px}
-.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:.06em;color:var(--white);text-align:center;margin-bottom:4px}
-.auth-logo em{color:var(--accent);font-style:italic}
-.auth-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:36px}
-.auth-card{background:var(--s1);border:1px solid var(--border2);padding:32px}
-.auth-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;text-transform:uppercase;letter-spacing:.06em;color:var(--white);margin-bottom:24px}
+.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:.06em;color:#f2f2f2;text-align:center;margin-bottom:4px}
+.auth-logo em{color:#00aaff;font-style:italic}
+.auth-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#888;text-align:center;margin-bottom:36px}
+.auth-card{background:#181818;border:1px solid #333;padding:32px}
+.auth-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;text-transform:uppercase;letter-spacing:.06em;color:#f2f2f2;margin-bottom:24px}
 .auth-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-.auth-field label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-.auth-field input{background:var(--bg);border:1px solid var(--border2);color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;padding:11px 14px;outline:none;transition:border-color .12s;width:100%}
-.auth-field input:focus{border-color:var(--accent)}
-.auth-btn{width:100%;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.1em;text-transform:uppercase;background:var(--accent);color:#fff;border:none;padding:13px;cursor:pointer;margin-top:8px;transition:background .12s}
-.auth-btn:hover{background:var(--accent2)}
-.auth-switch{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-align:center;margin-top:16px}
-.auth-switch a{color:var(--accent);cursor:pointer;text-decoration:underline}
-.auth-error{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);margin-top:10px;min-height:14px;text-align:center}
+.auth-field label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#888}
+.auth-field input{background:#0d0d0d;border:1px solid #333;color:#f2f2f2;font-family:'Barlow',sans-serif;font-size:16px;padding:11px 14px;outline:none;transition:border-color .12s;width:100%}
+.auth-field input:focus{border-color:#00aaff}
+.auth-btn{width:100%;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:.1em;text-transform:uppercase;background:#00aaff;color:#fff;border:none;padding:13px;cursor:pointer;margin-top:8px;transition:background .12s}
+.auth-btn:hover{background:#0088dd}
+.auth-switch{font-family:'JetBrains Mono',monospace;font-size:10px;color:#888;text-align:center;margin-top:16px}
+.auth-switch a{color:#00aaff;cursor:pointer;text-decoration:underline}
+.auth-error{font-family:'JetBrains Mono',monospace;font-size:10px;color:#ff3131;margin-top:10px;min-height:14px;text-align:center}
+#auth-loading{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#555;text-align:center;margin-top:14px}
 .nav-user{font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a5a;padding:0 14px;display:flex;align-items:center;gap:8px;border-right:1px solid #1e1e1e}
 
 /* LOGO & SIGNATURE SETTINGS */
@@ -344,7 +346,8 @@ textarea{resize:vertical;min-height:64px}
  <div class="auth-box">
   <div class="auth-logo">Auto<em>Flip</em></div>
   <div class="auth-sub">M&amp;K Brothers Repair</div>
-  <div class="auth-card">
+  <div id="auth-loading">Starting up…</div>
+  <div class="auth-card" id="auth-card" style="display:none">
    <div class="auth-title" id="auth-title">Create Account</div>
    <!-- Create fields -->
    <div id="auth-create-fields">
@@ -854,25 +857,41 @@ textarea{resize:vertical;min-height:64px}
 
 <div class="tt" id="tt"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-// ── Firebase + Firestore (with localStorage fallback) ──
+// ── Firebase + Firestore (non-blocking dynamic load with localStorage fallback) ──
 var db=null,useFirestore=false;
-try{
-  var fbApp=firebase.initializeApp({
-    apiKey:"AIzaSyA6PpHMH2SLGCyKFFhBJ4SjoCcfYS4pot4",
-    authDomain:"auto-flip-274e5.firebaseapp.com",
-    projectId:"auto-flip-274e5",
-    storageBucket:"auto-flip-274e5.firebasestorage.app",
-    messagingSenderId:"310016649945",
-    appId:"1:310016649945:web:1d1d5af9144d363fbeecc8"
-  });
-  db=firebase.firestore(fbApp);
-  useFirestore=true;
-}catch(e){console.warn('Firebase unavailable, using localStorage:',e.message);}
+var _fbConfig={
+  apiKey:"AIzaSyA6PpHMH2SLGCyKFFhBJ4SjoCcfYS4pot4",
+  authDomain:"auto-flip-274e5.firebaseapp.com",
+  projectId:"auto-flip-274e5",
+  storageBucket:"auto-flip-274e5.firebasestorage.app",
+  messagingSenderId:"310016649945",
+  appId:"1:310016649945:web:1d1d5af9144d363fbeecc8"
+};
 function _timeout(ms){return new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'))},ms);})}
-function _fsOp(promise){return Promise.race([promise,_timeout(6000)]).catch(function(e){if(e.message==='timeout'||!useFirestore)throw e;throw e;});}
+function _loadFirebase(){
+  return new Promise(function(res){
+    if(typeof firebase!=='undefined'){
+      try{var a=firebase.initializeApp(_fbConfig);db=firebase.firestore(a);useFirestore=true;}catch(e){}
+      return res();
+    }
+    var s1=document.createElement('script');
+    s1.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+    s1.onerror=function(){res();};
+    s1.onload=function(){
+      var s2=document.createElement('script');
+      s2.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
+      s2.onerror=function(){res();};
+      s2.onload=function(){
+        try{var a=firebase.initializeApp(_fbConfig);db=firebase.firestore(a);useFirestore=true;console.log('Firestore ready');}
+        catch(e){console.warn('Firebase init failed:',e.message);}
+        res();
+      };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  });
+}
 
 // ── IndexedDB docs ──
 var DocDB=(function(){
@@ -1911,7 +1930,14 @@ function logout(){
   setAuthMode(_lsAccounts().length?'login':'create');
 }
 
-function _showAuth(mode){setAuthMode(mode);document.getElementById('auth-screen').style.display='flex';}
+function _showAuth(mode){
+  setAuthMode(mode);
+  var loading=document.getElementById('auth-loading');
+  var card=document.getElementById('auth-card');
+  if(loading)loading.style.display='none';
+  if(card)card.style.display='';
+  document.getElementById('auth-screen').style.display='flex';
+}
 
 // ── Migrate old localStorage data to Firestore (one-time) ──
 function migrateFromLocalStorage(){
@@ -1969,7 +1995,8 @@ function initAuth(){
   }).catch(function(){_showAuth('create');});
 }
 
-initAuth();
+// Load Firebase (non-blocking) then start app — max 4s wait so mobile never hangs
+Promise.race([_loadFirebase(), _timeout(4000)]).catch(function(){}).then(function(){initAuth();});
 </script>
 </body>
 </html>
