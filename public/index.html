@@ -213,28 +213,21 @@ textarea{resize:vertical;min-height:64px}
   body.rpt-printing #pi-placeholder{display:none!important}
 }
 
-/* ── BOTTOM NAV ── */
-.bnav{display:none}
+/* ── BOTTOM NAV — hidden, replaced by scrollable top nav on mobile ── */
+.bnav{display:none!important}
 
 @media(max-width:768px){
-  /* TOP NAV — brand + icons only, hide page buttons */
-  nav{flex-wrap:nowrap;overflow:visible}
-  .nav-brand{padding:0 14px;font-size:18px}
-  .nav-btn{display:none} /* page nav handled by bottom bar */
+  /* TOP NAV — scrolls horizontally, same buttons as desktop */
+  nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  .nav-brand{padding:0 12px;font-size:17px;flex-shrink:0}
+  .nav-btn{padding:0 14px;font-size:11px;min-height:48px;flex-shrink:0}
   .nav-end{flex-shrink:0}
   .nav-user span:first-child{display:none}
   .nav-icon{min-width:44px;min-height:48px}
 
-  /* BOTTOM NAV */
-  .bnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#0d0d0d;border-top:2px solid var(--accent);padding-bottom:env(safe-area-inset-bottom)}
-  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;border-top:3px solid transparent;margin-top:-2px;padding:8px 4px 6px;cursor:pointer;transition:color .12s}
-  .bnav-icon{font-size:20px;line-height:1}
-  .bnav-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .bnav-btn.active .bnav-label{color:var(--accent)}
-  .bnav-btn.active{border-top-color:var(--accent)}
-
-  /* PAGE — add bottom padding so content isn't behind bottom nav */
-  .page{padding:14px 12px 80px}
+  /* PAGE */
+  .page{padding:14px 12px 24px}
   .heading{font-size:clamp(30px,8vw,48px);margin-bottom:12px;padding-bottom:12px}
 
   /* STATS */
@@ -406,24 +399,6 @@ textarea{resize:vertical;min-height:64px}
   </div>
 </nav>
 
-<!-- BOTTOM NAV (mobile only) -->
-<nav class="bnav">
-  <button class="bnav-btn active" data-page="dashboard" onclick="showPage('dashboard',this)">
-    <span class="bnav-icon">📊</span><span class="bnav-label">Dashboard</span>
-  </button>
-  <button class="bnav-btn" data-page="cars" onclick="showPage('cars',this)">
-    <span class="bnav-icon">🚗</span><span class="bnav-label">Cars</span>
-  </button>
-  <button class="bnav-btn" data-page="parts" onclick="showPage('parts',this)">
-    <span class="bnav-icon">🔩</span><span class="bnav-label">Parts</span>
-  </button>
-  <button class="bnav-btn" data-page="profits" onclick="showPage('profits',this)">
-    <span class="bnav-icon">💰</span><span class="bnav-label">Profits</span>
-  </button>
-  <button class="bnav-btn" data-page="reports" onclick="showPage('reports',this)">
-    <span class="bnav-icon">📋</span><span class="bnav-label">Reports</span>
-  </button>
-</nav>
 
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
@@ -970,12 +945,12 @@ function priBadge(p){
 
 // ── Nav ──
 function showPage(name,btn){
-  document.querySelectorAll('.nav-btn,.bnav-btn').forEach(function(b){b.classList.remove('active')});
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.page').forEach(function(p){p.style.display='none';p.classList.remove('active')});
   document.querySelectorAll('[data-page="'+name+'"]').forEach(function(b){b.classList.add('active')});
   if(btn)btn.classList.add('active');
   var pg=document.getElementById('page-'+name);
-  if(pg)pg.classList.add('active');
+  if(pg){pg.classList.add('active');pg.style.display='block';}
   refreshAll();
 }
 function bgClose(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open')}
