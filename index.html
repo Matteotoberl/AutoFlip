@@ -213,29 +213,91 @@ textarea{resize:vertical;min-height:64px}
   body.rpt-printing #pi-placeholder{display:none!important}
 }
 
+/* ── BOTTOM NAV ── */
+.bnav{display:none}
+
 @media(max-width:768px){
-  nav{flex-wrap:wrap;height:auto}
-  .nav-brand{border-right:none;width:100%;justify-content:center;padding:10px 0}
-  .nav-end{margin-left:0;border-left:none;border-top:1px solid var(--border2);width:100%;justify-content:flex-end}
-  .page{padding:16px 12px}
-  .heading{font-size:clamp(36px,9vw,60px);margin-bottom:16px;padding-bottom:14px}
+  /* TOP NAV — slim, horizontal scroll */
+  nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  .nav-brand{flex-shrink:0;padding:0 14px;font-size:18px;border-right:1px solid var(--border2)}
+  .nav-btn{flex-shrink:0;min-height:48px;padding:0 16px;font-size:11px}
+  .nav-end{flex-shrink:0}
+  .nav-user span:first-child{display:none} /* hide username text, keep logout icon */
+  .nav-icon{min-width:44px;min-height:48px}
+
+  /* BOTTOM NAV */
+  .bnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--black);border-top:2px solid var(--accent);padding-bottom:env(safe-area-inset-bottom)}
+  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;border-top:3px solid transparent;margin-top:-2px;padding:8px 4px 6px;cursor:pointer;transition:color .12s}
+  .bnav-icon{font-size:20px;line-height:1}
+  .bnav-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .bnav-btn.active .bnav-label{color:var(--accent)}
+  .bnav-btn.active{border-top-color:var(--accent)}
+
+  /* PAGE — add bottom padding so content isn't behind bottom nav */
+  .page{padding:14px 12px 80px}
+  .heading{font-size:clamp(30px,8vw,48px);margin-bottom:12px;padding-bottom:12px}
+
+  /* STATS */
   .stats-row{flex-wrap:wrap}
-  .stat{flex:0 0 50%;border-right:none;border-bottom:1px solid var(--border2)}
+  .stat{flex:0 0 50%;border-right:none;border-bottom:1px solid var(--border2);padding:14px 14px}
   .stat:nth-child(odd){border-right:1px solid var(--border2)}
   .stat-val{font-size:26px}
-  .grid2{grid-template-columns:1fr}
-  .tbl-wrap{overflow-x:auto;margin:0 -12px;border-left:none;border-right:none}
-  table{min-width:660px}
-  td,th{padding:9px 10px;white-space:nowrap}
-  .toolbar{flex-direction:column;align-items:stretch;gap:8px}
-  .toolbar .inp,.toolbar .sel,.toolbar .btn{width:100%;justify-content:center}
-  .fg{grid-template-columns:1fr}.fg .full{grid-column:1}
+  .stat-key{font-size:8px}
+
+  /* GRID */
+  .grid2{grid-template-columns:1fr;gap:12px;margin-bottom:16px}
+
+  /* TOOLBAR */
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px;margin-bottom:14px}
+  .toolbar .inp,.toolbar .sel{width:100%;font-size:16px}
+  .toolbar .btn{width:100%;justify-content:center;padding:13px 22px;font-size:14px}
+  .filters{flex-wrap:wrap}
+  .fb{flex:1;min-width:72px;text-align:center;padding:9px 8px}
+
+  /* TABLES */
+  .tbl-wrap{overflow-x:auto;margin:0 -12px;border-left:none;border-right:none;-webkit-overflow-scrolling:touch}
+  table{min-width:580px}
+  td,th{padding:10px 11px;white-space:nowrap;font-size:12px}
+
+  /* MODALS — slide up from bottom */
   .overlay{align-items:flex-end;padding:0}
-  .modal{max-width:100%;max-height:88vh;border-left:none;border-right:none;border-bottom:none}
-  .rpt-wrap{padding:20px}
+  .modal{max-width:100%;max-height:94vh;border-left:none;border-right:none;border-bottom:none}
+  .m-head{padding:16px 18px;position:sticky;top:0;background:var(--s1);z-index:1}
+  .m-body{padding:16px 18px}
+  .m-foot{padding:12px 18px;gap:8px;position:sticky;bottom:0;background:var(--s1)}
+  .m-foot .btn{flex:1;justify-content:center;padding:12px 8px}
+
+  /* FORMS — prevent iOS zoom */
+  .fg{grid-template-columns:1fr}
+  .fg .full{grid-column:1}
+  input[type=text],input[type=number],input[type=date],textarea,select{font-size:16px;padding:11px 12px}
+
+  /* CAR ACCORDION */
+  .car-group-hdr{padding:14px 14px;min-height:56px}
+  .car-group-plate{font-size:18px}
+  .car-group-name{font-size:13px}
+  .part-item{padding:12px 14px;flex-wrap:wrap;gap:8px}
+
+  /* REPORT */
+  .rpt-wrap{padding:16px}
   .rpt-meta{grid-template-columns:1fr}
   .rpt-meta-box{border-right:none;border-bottom:1px solid #ddd}
   .rpt-footer{grid-template-columns:1fr}
+
+  /* AUTH */
+  #auth-screen{padding:16px;align-items:flex-start;padding-top:50px}
+  .auth-box{max-width:100%}
+  .auth-logo{font-size:40px}
+  .auth-sub{margin-bottom:24px}
+  .auth-card{padding:22px 18px}
+  .auth-field input{font-size:16px;padding:12px 14px}
+  .auth-btn{padding:15px;font-size:16px}
+}
+
+@media(max-width:390px){
+  .stat{flex:0 0 100%;border-right:none!important}
+  .bnav-label{font-size:7px}
 }
 
 /* ── AUTH SCREEN ── */
@@ -310,11 +372,11 @@ textarea{resize:vertical;min-height:64px}
 
 <nav>
   <div class="nav-brand">Auto<em>Flip</em></div>
-  <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
-  <button class="nav-btn" onclick="showPage('cars',this)">Cars</button>
-  <button class="nav-btn" onclick="showPage('parts',this)">Parts &amp; Costs</button>
-  <button class="nav-btn" onclick="showPage('profits',this)">Profits</button>
-  <button class="nav-btn" onclick="showPage('reports',this)">Reports</button>
+  <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard',this)">Dashboard</button>
+  <button class="nav-btn" data-page="cars" onclick="showPage('cars',this)">Cars</button>
+  <button class="nav-btn" data-page="parts" onclick="showPage('parts',this)">Parts &amp; Costs</button>
+  <button class="nav-btn" data-page="profits" onclick="showPage('profits',this)">Profits</button>
+  <button class="nav-btn" data-page="reports" onclick="showPage('reports',this)">Reports</button>
   <div class="nav-end">
     <span class="nav-user"><span id="nav-username"></span><button class="nav-icon" style="border:none;padding:0" onclick="logout()" title="Log out">🚪</button></span>
     <button class="nav-icon" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">🌙</button>
@@ -322,6 +384,25 @@ textarea{resize:vertical;min-height:64px}
     <button class="nav-icon" onclick="exportData()" title="Export backup">⬇️</button>
     <label class="nav-icon" style="cursor:pointer" title="Import backup">⬆️<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
   </div>
+</nav>
+
+<!-- BOTTOM NAV (mobile only) -->
+<nav class="bnav">
+  <button class="bnav-btn active" data-page="dashboard" onclick="showPage('dashboard',this)">
+    <span class="bnav-icon">📊</span><span class="bnav-label">Dashboard</span>
+  </button>
+  <button class="bnav-btn" data-page="cars" onclick="showPage('cars',this)">
+    <span class="bnav-icon">🚗</span><span class="bnav-label">Cars</span>
+  </button>
+  <button class="bnav-btn" data-page="parts" onclick="showPage('parts',this)">
+    <span class="bnav-icon">🔩</span><span class="bnav-label">Parts</span>
+  </button>
+  <button class="bnav-btn" data-page="profits" onclick="showPage('profits',this)">
+    <span class="bnav-icon">💰</span><span class="bnav-label">Profits</span>
+  </button>
+  <button class="bnav-btn" data-page="reports" onclick="showPage('reports',this)">
+    <span class="bnav-icon">📋</span><span class="bnav-label">Reports</span>
+  </button>
 </nav>
 
 <!-- DASHBOARD -->
@@ -786,8 +867,9 @@ function priBadge(p){
 
 // ── Nav ──
 function showPage(name,btn){
-  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.nav-btn,.bnav-btn').forEach(function(b){b.classList.remove('active')});
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('[data-page="'+name+'"]').forEach(function(b){b.classList.add('active')});
   if(btn)btn.classList.add('active');
   var pg=document.getElementById('page-'+name);
   if(pg)pg.classList.add('active');
