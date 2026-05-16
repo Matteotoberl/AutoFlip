@@ -220,11 +220,11 @@ textarea{resize:vertical;min-height:64px}
   /* TOP NAV — scrolls horizontally, same buttons as desktop */
   nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav::-webkit-scrollbar{display:none}
-  .nav-brand{padding:0 12px;font-size:17px;flex-shrink:0}
-  .nav-btn{padding:0 14px;font-size:11px;min-height:48px;flex-shrink:0}
+  .nav-brand{padding:0 14px;font-size:18px;flex-shrink:0}
+  .nav-btn{padding:0 16px;font-size:12px;min-height:52px;flex-shrink:0;letter-spacing:.1em}
   .nav-end{flex-shrink:0}
   .nav-user span:first-child{display:none}
-  .nav-icon{min-width:44px;min-height:48px}
+  .nav-icon{min-width:48px;min-height:52px;font-size:18px}
 
   /* PAGE */
   .page{padding:14px 12px 24px}
@@ -517,13 +517,17 @@ textarea{resize:vertical;min-height:64px}
 
   <div id="pi-report" style="display:none">
    <!-- add-defect bar -->
-   <div class="rpt-page-toolbar no-print" style="margin-bottom:16px;padding:14px;background:var(--s1);border:1px solid var(--border2)">
-    <input type="text" id="pi-defect-desc" placeholder="Defect description…" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:8px 11px;font-size:13px;font-family:'Barlow',sans-serif">
-    <select id="pi-defect-sev" style="background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:8px 11px;font-size:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.06em">
-     <option value="Critical">Critical</option><option value="Advisory">Advisory</option><option value="Minor">Minor / Note</option>
-    </select>
-    <button class="btn btn-g" onclick="addPageDefect()">+ Add Defect</button>
-    <textarea id="pi-notes-input" placeholder="Notes / recommendations…" style="flex:2;min-width:200px;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:8px 11px;font-size:13px;font-family:'Barlow',sans-serif;resize:none;height:38px" oninput="document.getElementById('pi-notes-display').textContent=this.value"></textarea>
+   <div class="no-print" style="margin-bottom:16px;padding:14px;background:var(--s1);border:1px solid var(--border2)">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Add Defect</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+     <input type="text" id="pi-defect-desc" placeholder="Defect description…" onkeydown="if(event.key==='Enter'){event.preventDefault();addPageDefect();}" style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 11px;font-size:14px;font-family:'Barlow',sans-serif">
+     <select id="pi-defect-sev" style="background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 11px;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.06em;flex-shrink:0">
+      <option value="Critical">Critical</option><option value="Advisory">Advisory</option><option value="Minor">Minor / Note</option>
+     </select>
+     <button class="btn btn-g" onclick="addPageDefect()" style="flex-shrink:0">+ Add Defect</button>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Notes / Recommendations</div>
+    <textarea id="pi-notes-input" placeholder="Additional notes or recommendations…" style="width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 11px;font-size:14px;font-family:'Barlow',sans-serif;resize:vertical;min-height:56px" oninput="document.getElementById('pi-notes-display').textContent=this.value"></textarea>
    </div>
 
    <!-- printable report sheet -->
@@ -571,7 +575,7 @@ textarea{resize:vertical;min-height:64px}
       <div id="pi-notes-display" class="rpt-notes-box"></div>
      </div>
      <div class="rpt-footer">
-      <div><div class="rpt-sig-label">Technician Name</div><div class="rpt-sig-line"></div></div>
+      <div><div class="rpt-sig-label">Technician Name</div><div id="pi-tech-name" style="font-size:13px;font-weight:600;color:#111;margin-bottom:6px"></div><div class="rpt-sig-line"></div></div>
       <div>
        <div class="rpt-sig-label">Signature &amp; Date</div>
        <img id="pi-sig-img" style="max-height:48px;max-width:180px;display:none;margin-bottom:4px">
@@ -749,6 +753,7 @@ textarea{resize:vertical;min-height:64px}
     <div class="rpt-footer">
      <div>
       <div class="rpt-sig-label">Technician Name</div>
+      <div id="rpt-tech-name" style="font-size:13px;font-weight:600;color:#111;margin-bottom:6px"></div>
       <div class="rpt-sig-line"></div>
      </div>
      <div>
@@ -784,7 +789,8 @@ textarea{resize:vertical;min-height:64px}
    <!-- Business -->
    <div class="set-section">
     <div class="set-section-title">Business</div>
-    <div class="fl"><label>Business / Your Name (shown on reports)</label><input type="text" id="set-biz" placeholder="e.g. M&amp;K Brothers Repair"></div>
+    <div class="fl" style="margin-bottom:12px"><label>Business / Company Name (shown on reports)</label><input type="text" id="set-biz" placeholder="e.g. M&amp;K Brothers Repair"></div>
+    <div class="fl"><label>Technician Name (shown on reports)</label><input type="text" id="set-tech" placeholder="e.g. Mohammed Khan"></div>
    </div>
    <!-- Logo -->
    <div class="set-section">
@@ -1060,6 +1066,7 @@ function _applyReportAssets(){
 function openSettings(){
   document.getElementById('set-apikey').value=settings.dvlaKey||'';
   document.getElementById('set-biz').value=settings.biz||'';
+  document.getElementById('set-tech').value=settings.tech||'';
   _sigInited=false; // allow re-init if modal was closed and re-opened
   _refreshLogoPreview();_refreshSigPreview();
   document.getElementById('settings-modal').classList.add('open');
@@ -1069,7 +1076,8 @@ function closeSettings(){document.getElementById('settings-modal').classList.rem
 function saveSettings(){
   settings.dvlaKey=(document.getElementById('set-apikey').value||'').trim();
   settings.biz=(document.getElementById('set-biz').value||'').trim();
-  sv('settings');closeSettings();
+  settings.tech=(document.getElementById('set-tech').value||'').trim();
+  sv();closeSettings();
 }
 function clearAllData(){if(!confirm('Delete ALL data? Cannot be undone.'))return;cars=[];parts=[];sv('cars');sv('parts');refreshAll();closeSettings()}
 
@@ -1105,6 +1113,7 @@ function loadPageReport(carId){
   piDefects=c.defects?c.defects.slice():[];
   ph.style.display='none';rpt.style.display='block';pb.style.display='';
   document.getElementById('pi-biz').textContent=settings.biz||'AutoFlip';
+  document.getElementById('pi-tech-name').textContent=settings.tech||'';
   _applyReportAssets();
   document.getElementById('pi-num').textContent='Ref: RPT-'+(c.plate||'XX')+'-'+new Date().toISOString().slice(0,10).replace(/-/g,'');
   document.getElementById('pi-date').textContent='Date: '+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
@@ -1540,6 +1549,7 @@ function openReport(carId){
   if(!c)return;
   rptDefects=c.defects?c.defects.slice():[];
   document.getElementById('rpt-biz').textContent=settings.biz||'AutoFlip';
+  document.getElementById('rpt-tech-name').textContent=settings.tech||'';
   _applyReportAssets();
   document.getElementById('rpt-num').textContent='Ref: RPT-'+c.plate+'-'+new Date().toISOString().slice(0,10).replace(/-/g,'');
   document.getElementById('rpt-date').textContent='Date: '+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
