@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /af2_accounts/{doc} {
+      allow read, write: if true;
+    }
+    match /af2_userdata/{doc} {
+      allow read, write: if true;
+    }
+  }
+}

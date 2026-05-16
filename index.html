@@ -713,7 +713,20 @@ textarea{resize:vertical;min-height:64px}
 
 <div class="tt" id="tt"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
+// ── Firebase + Firestore ──
+var fbApp=firebase.initializeApp({
+  apiKey:"AIzaSyA6PpHMH2SLGCyKFFhBJ4SjoCcfYS4pot4",
+  authDomain:"auto-flip-274e5.firebaseapp.com",
+  projectId:"auto-flip-274e5",
+  storageBucket:"auto-flip-274e5.firebasestorage.app",
+  messagingSenderId:"310016649945",
+  appId:"1:310016649945:web:1d1d5af9144d363fbeecc8"
+});
+var db=firebase.firestore(fbApp);
+
 // ── IndexedDB docs ──
 var DocDB=(function(){
   var db=null;
@@ -726,14 +739,17 @@ var DocDB=(function(){
 })();
 
 // ── Data ──
-var K={cars:'',parts:'',settings:''};
 var cars=[],parts=[],settings={};
-function sv(k){if(K[k])localStorage.setItem(K[k],JSON.stringify(eval(k)))}
+function sv(k){
+  if(!currentUser)return;
+  db.collection('af2_userdata').doc(currentUser).set({cars:cars,parts:parts,settings:settings})
+    .catch(function(e){console.warn('Save error:',e)});
+}
 function loadUserData(username){
-  K.cars='af2_cars_'+username;K.parts='af2_parts_'+username;K.settings='af2_settings_'+username;
-  cars=JSON.parse(localStorage.getItem(K.cars)||'[]');
-  parts=JSON.parse(localStorage.getItem(K.parts)||'[]');
-  settings=JSON.parse(localStorage.getItem(K.settings)||'{}');
+  return db.collection('af2_userdata').doc(username).get().then(function(doc){
+    if(doc.exists){var d=doc.data();cars=d.cars||[];parts=d.parts||[];settings=d.settings||{};}
+    else{cars=[];parts=[];settings={};}
+  });
 }
 var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2)};
 var fmt=function(v){return'£'+(parseFloat(v)||0).toFixed(2)};
@@ -1446,15 +1462,11 @@ function importData(e){
 var authMode='create';
 var currentUser=null;
 
-function getAccounts(){return JSON.parse(localStorage.getItem('af2_accounts')||'[]')}
-function saveAccounts(a){localStorage.setItem('af2_accounts',JSON.stringify(a))}
-
 function hashPw(pw){
   return crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw)).then(function(buf){
     return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
   });
 }
-
 function normalisePhone(p){return(p||'').replace(/[\s\-().+]/g,'').toLowerCase()}
 
 function setAuthMode(mode){
@@ -1482,10 +1494,24 @@ function setAuthMode(mode){
   }
 }
 
+function findAccount(id){
+  var idLower=id.toLowerCase();
+  var idNorm=normalisePhone(id);
+  return db.collection('af2_accounts').doc(idLower).get().then(function(doc){
+    if(doc.exists)return doc.data();
+    return db.collection('af2_accounts').where('email','==',idLower).limit(1).get().then(function(snap){
+      if(!snap.empty)return snap.docs[0].data();
+      return db.collection('af2_accounts').where('phone','==',idNorm).limit(1).get().then(function(snap2){
+        return snap2.empty?null:snap2.docs[0].data();
+      });
+    });
+  });
+}
+
 function authSubmit(){
   var errEl=document.getElementById('auth-error');
   errEl.textContent='';
-  var accounts=getAccounts();
+  var btn=document.getElementById('auth-submit-btn');
 
   if(authMode==='create'){
     var username=(document.getElementById('auth-user').value||'').trim();
@@ -1498,28 +1524,42 @@ function authSubmit(){
     if(!phone){errEl.textContent='Enter a phone number.';return}
     if(!pw||pw.length<6){errEl.textContent='Password must be at least 6 characters.';return}
     if(pw!==pw2){errEl.textContent='Passwords do not match.';return}
-    if(accounts.find(function(a){return a.username.toLowerCase()===username.toLowerCase()||a.email===email||normalisePhone(a.phone)===phone})){
-      errEl.textContent='Username, email or phone already registered.';return;
-    }
-    hashPw(pw).then(function(hash){
-      accounts.push({username:username,email:email,phone:phone,hash:hash});
-      saveAccounts(accounts);
+    btn.textContent='Creating…';btn.disabled=true;
+    db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
+      if(doc.exists)throw new Error('Username already taken.');
+      return db.collection('af2_accounts').where('email','==',email).limit(1).get();
+    }).then(function(snap){
+      if(!snap.empty)throw new Error('Email already registered.');
+      return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
+    }).then(function(snap){
+      if(!snap.empty)throw new Error('Phone number already registered.');
+      return hashPw(pw);
+    }).then(function(hash){
+      return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash});
+    }).then(function(){
+      btn.textContent='Create Account';btn.disabled=false;
       startSession(username);
+    }).catch(function(err){
+      errEl.textContent=err.message||'Something went wrong. Check your connection.';
+      btn.textContent='Create Account';btn.disabled=false;
     });
 
   } else {
-    var id=(document.getElementById('auth-login-id').value||'').trim().toLowerCase();
+    var id=(document.getElementById('auth-login-id').value||'').trim();
     var pw=document.getElementById('auth-login-pw').value;
     if(!id){errEl.textContent='Enter your username, email or phone.';return}
     if(!pw){errEl.textContent='Enter your password.';return}
-    var idNorm=normalisePhone(id);
-    var acc=accounts.find(function(a){
-      return a.username.toLowerCase()===id||a.email===id||normalisePhone(a.phone)===idNorm;
-    });
-    if(!acc){errEl.textContent='No account found with those details.';return}
-    hashPw(pw).then(function(hash){
-      if(hash!==acc.hash){document.getElementById('auth-error').textContent='Wrong password.';return}
-      startSession(acc.username);
+    btn.textContent='Logging in…';btn.disabled=true;
+    findAccount(id).then(function(acc){
+      if(!acc)throw new Error('No account found with those details.');
+      return hashPw(pw).then(function(hash){
+        if(hash!==acc.hash)throw new Error('Wrong password.');
+        btn.textContent='Log In';btn.disabled=false;
+        startSession(acc.username);
+      });
+    }).catch(function(err){
+      errEl.textContent=err.message||'Something went wrong. Check your connection.';
+      btn.textContent='Log In';btn.disabled=false;
     });
   }
 }
@@ -1529,31 +1569,38 @@ function startSession(username){
   sessionStorage.setItem('af2_user',username);
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('nav-username').textContent=username;
-  loadUserData(username);
-  var t=localStorage.getItem('af_theme');
-  if(t){document.documentElement.dataset.theme=t;if(t==='light')document.getElementById('theme-btn').textContent='☀️'}
-  refreshAll();
+  loadUserData(username).then(function(){
+    var t=localStorage.getItem('af_theme');
+    if(t){document.documentElement.dataset.theme=t;if(t==='light')document.getElementById('theme-btn').textContent='☀️'}
+    refreshAll();
+  });
 }
 
 function logout(){
   if(!confirm('Log out?'))return;
   sessionStorage.removeItem('af2_user');
   currentUser=null;
-  cars=[];parts=[];settings={};K.cars='';K.parts='';K.settings='';
+  cars=[];parts=[];settings={};
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('auth-error').textContent='';
-  var accounts=getAccounts();
-  setAuthMode(accounts.length?'login':'create');
+  setAuthMode('login');
 }
 
 function initAuth(){
-  var accounts=getAccounts();
   var savedUser=sessionStorage.getItem('af2_user');
-  if(savedUser&&accounts.find(function(a){return a.username===savedUser})){
-    startSession(savedUser);
+  if(savedUser){
+    db.collection('af2_accounts').doc(savedUser.toLowerCase()).get().then(function(doc){
+      if(doc.exists){startSession(savedUser);}
+      else{setAuthMode('login');document.getElementById('auth-screen').style.display='flex';}
+    }).catch(function(){setAuthMode('login');document.getElementById('auth-screen').style.display='flex';});
   } else {
-    setAuthMode(accounts.length?'login':'create');
-    document.getElementById('auth-screen').style.display='flex';
+    db.collection('af2_accounts').limit(1).get().then(function(snap){
+      setAuthMode(snap.empty?'create':'login');
+      document.getElementById('auth-screen').style.display='flex';
+    }).catch(function(){
+      setAuthMode('create');
+      document.getElementById('auth-screen').style.display='flex';
+    });
   }
 }
 
