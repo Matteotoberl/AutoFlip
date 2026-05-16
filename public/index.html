@@ -1894,19 +1894,24 @@ function authSubmit(){
 function startSession(username){
   currentUser=username;
   sessionStorage.setItem('af2_user',username);
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('nav-username').textContent=username;
-  // Apply saved theme
+  // Hide auth screen — set all 3 properties to force iOS Safari to repaint
+  var as=document.getElementById('auth-screen');
+  as.style.display='none';
+  as.style.visibility='hidden';
+  as.style.pointerEvents='none';
+  // Apply saved theme before showing content
   var t=localStorage.getItem('af_theme');
   if(t){
     document.documentElement.dataset.theme=t;
     document.getElementById('theme-btn').textContent=t==='light'?'☀️':'🌙';
   }
+  document.getElementById('nav-username').textContent=username;
+  // Always explicitly activate dashboard so there's always a visible page
+  showPage('dashboard');
   loadUserData(username).then(function(){
     refreshAll();
   }).catch(function(err){
     console.error('Failed to load data:',err);
-    // Show app anyway with empty data
     refreshAll();
   });
 }
@@ -1925,8 +1930,16 @@ function logout(){
   sessionStorage.removeItem('af2_user');
   currentUser=null;
   cars=[];parts=[];settings={};
-  document.getElementById('auth-screen').style.display='flex';
+  var as=document.getElementById('auth-screen');
+  as.style.display='flex';
+  as.style.visibility='visible';
+  as.style.pointerEvents='auto';
   document.getElementById('auth-error').textContent='';
+  // Show card and hide loading text on logout
+  var card=document.getElementById('auth-card');
+  var loading=document.getElementById('auth-loading');
+  if(card)card.style.display='';
+  if(loading)loading.style.display='none';
   setAuthMode(_lsAccounts().length?'login':'create');
 }
 
