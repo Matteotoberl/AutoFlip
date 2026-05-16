@@ -318,6 +318,24 @@ textarea{resize:vertical;min-height:64px}
 .auth-switch a{color:var(--accent);cursor:pointer;text-decoration:underline}
 .auth-error{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);margin-top:10px;min-height:14px;text-align:center}
 .nav-user{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);padding:0 14px;display:flex;align-items:center;gap:8px;border-right:1px solid var(--border)}
+
+/* LOGO & SIGNATURE SETTINGS */
+.set-section{border-bottom:1px solid var(--border2);padding-bottom:18px;margin-bottom:18px}
+.set-section-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.set-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+.upload-lbl{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--accent);border:1px solid var(--accent);padding:7px 14px;cursor:pointer;transition:background .12s}
+.upload-lbl:hover{background:var(--glow)}
+.logo-preview-row{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+#set-logo-preview{max-height:56px;max-width:180px;object-fit:contain;border:1px solid var(--border2);padding:6px;background:#fff;display:none}
+#set-logo-preview.show{display:block}
+.sig-tabs{display:flex;border-bottom:1px solid var(--border2);margin-bottom:14px}
+.sig-tab-btn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 18px;color:var(--muted);cursor:pointer;transition:color .12s}
+.sig-tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sig-canvas-wrap{border:2px dashed var(--border2);background:#fff;cursor:crosshair;touch-action:none;position:relative}
+#sig-canvas{display:block;width:100%;height:130px}
+.sig-current{margin-top:14px;padding-top:14px;border-top:1px solid var(--border2);display:none}
+.sig-current.show{display:block}
+#sig-current-img{max-height:56px;max-width:220px;border:1px solid var(--border2);padding:4px;background:#fff;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -536,6 +554,7 @@ textarea{resize:vertical;min-height:64px}
     <div class="rpt-wrap">
      <div class="rpt-header">
       <div>
+       <img id="pi-logo" style="max-height:50px;max-width:160px;object-fit:contain;display:none;margin-bottom:6px;background:transparent">
        <div class="rpt-biz-name" id="pi-biz">AutoFlip</div>
        <div class="rpt-biz-sub">Vehicle Repair &amp; Sales</div>
       </div>
@@ -576,7 +595,11 @@ textarea{resize:vertical;min-height:64px}
      </div>
      <div class="rpt-footer">
       <div><div class="rpt-sig-label">Technician Name</div><div class="rpt-sig-line"></div></div>
-      <div><div class="rpt-sig-label">Signature &amp; Date</div><div class="rpt-sig-line"></div></div>
+      <div>
+       <div class="rpt-sig-label">Signature &amp; Date</div>
+       <img id="pi-sig-img" style="max-height:48px;max-width:180px;display:none;margin-bottom:4px">
+       <div class="rpt-sig-line" id="pi-sig-line"></div>
+      </div>
      </div>
      <div class="rpt-disclaimer" style="margin-top:16px">This document is a vehicle inspection and repair report, not a VAT invoice. All work carried out on the above vehicle.</div>
     </div>
@@ -681,6 +704,7 @@ textarea{resize:vertical;min-height:64px}
     <!-- HEADER -->
     <div class="rpt-header">
      <div>
+      <img id="rpt-logo" style="max-height:50px;max-width:160px;object-fit:contain;display:none;margin-bottom:6px;background:transparent">
       <div class="rpt-biz-name" id="rpt-biz">AutoFlip</div>
       <div class="rpt-biz-sub">Vehicle Repair &amp; Sales</div>
      </div>
@@ -715,8 +739,8 @@ textarea{resize:vertical;min-height:64px}
      <div id="rpt-defects-list" class="rpt-defects"></div>
      <!-- add defect row (hidden on print) -->
      <div class="no-print" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-      <input type="text" id="rpt-defect-desc" placeholder="Defect description…" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid #ccc;background:#fff;color:#111">
-      <select id="rpt-defect-sev" style="padding:7px 10px;font-size:13px;border:1px solid #ccc;background:#fff;color:#111">
+      <input type="text" id="rpt-defect-desc" placeholder="Defect description…" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid var(--border2);background:var(--bg);color:var(--white)">
+      <select id="rpt-defect-sev" style="padding:7px 10px;font-size:13px;border:1px solid var(--border2);background:var(--bg);color:var(--white)">
        <option value="Critical">Critical</option><option value="Advisory">Advisory</option><option value="Minor">Minor / Note</option>
       </select>
       <button class="btn btn-g btn-sm" onclick="addDefect()">+ Add Defect</button>
@@ -742,7 +766,7 @@ textarea{resize:vertical;min-height:64px}
     <div class="rpt-section">
      <div class="rpt-section-title">Notes / Recommendations</div>
      <div id="rpt-notes-display" class="rpt-notes-box"></div>
-     <textarea class="no-print" id="rpt-notes-input" placeholder="Additional notes or recommendations…" style="width:100%;margin-top:8px;padding:10px;font-size:13px;border:1px solid #ccc;background:#fff;color:#111;min-height:60px;resize:vertical" oninput="document.getElementById('rpt-notes-display').textContent=this.value"></textarea>
+     <textarea class="no-print" id="rpt-notes-input" placeholder="Additional notes or recommendations…" style="width:100%;margin-top:8px;padding:10px;font-size:13px;border:1px solid var(--border2);background:var(--bg);color:var(--white);min-height:60px;resize:vertical" oninput="document.getElementById('rpt-notes-display').textContent=this.value"></textarea>
     </div>
     <!-- FOOTER / SIGNATURES -->
     <div class="rpt-footer">
@@ -752,7 +776,8 @@ textarea{resize:vertical;min-height:64px}
      </div>
      <div>
       <div class="rpt-sig-label">Signature &amp; Date</div>
-      <div class="rpt-sig-line"></div>
+      <img id="rpt-sig-img" style="max-height:48px;max-width:180px;display:none;margin-bottom:4px">
+      <div class="rpt-sig-line" id="rpt-sig-line"></div>
      </div>
     </div>
     <div class="rpt-disclaimer" style="margin-top:16px">
@@ -779,12 +804,48 @@ textarea{resize:vertical;min-height:64px}
      <span style="color:var(--amber)">⚠️ Without a key, the plate lookup button will not work.</span>
     </div>
    </div>
-   <div style="border-bottom:1px solid var(--border2);padding-bottom:18px;margin-bottom:18px">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Business</div>
-    <div class="fl"><label>Business / Your Name (shown on reports)</label><input type="text" id="set-biz" placeholder="e.g. M&K Brothers Repair"></div>
+   <!-- Business -->
+   <div class="set-section">
+    <div class="set-section-title">Business</div>
+    <div class="fl"><label>Business / Your Name (shown on reports)</label><input type="text" id="set-biz" placeholder="e.g. M&amp;K Brothers Repair"></div>
    </div>
+   <!-- Logo -->
+   <div class="set-section">
+    <div class="set-section-title">Company Logo</div>
+    <div class="set-hint">Appears top-left on all reports next to your company name</div>
+    <label class="upload-lbl">📁 Upload Logo<input type="file" accept="image/*" onchange="logoUpload(event)" style="display:none"></label>
+    <div class="logo-preview-row">
+     <img id="set-logo-preview" alt="Logo preview">
+     <button class="btn btn-d btn-sm" onclick="removeLogo()" id="remove-logo-btn" style="display:none">Remove</button>
+    </div>
+   </div>
+   <!-- Signature -->
+   <div class="set-section">
+    <div class="set-section-title">Signature</div>
+    <div class="set-hint">Appears on the signature line of all reports. Draw with your finger or mouse, or upload an image.</div>
+    <div class="sig-tabs">
+     <button class="sig-tab-btn active" id="sigtab-draw" onclick="setSigTab('draw')">✏️ Draw</button>
+     <button class="sig-tab-btn" id="sigtab-upload" onclick="setSigTab('upload')">📁 Upload</button>
+    </div>
+    <div id="sig-draw-panel">
+     <div class="sig-canvas-wrap"><canvas id="sig-canvas" height="130"></canvas></div>
+     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-o btn-sm" onclick="sigClear()">Clear</button>
+      <button class="btn btn-b btn-sm" onclick="sigSave()">✓ Use This Signature</button>
+     </div>
+    </div>
+    <div id="sig-upload-panel" style="display:none">
+     <label class="upload-lbl">📁 Upload Signature Image<input type="file" accept="image/*" onchange="sigUpload(event)" style="display:none"></label>
+    </div>
+    <div class="sig-current" id="sig-current-wrap">
+     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px;letter-spacing:.12em;text-transform:uppercase">Saved Signature</div>
+     <img id="sig-current-img" alt="Signature">
+     <button class="btn btn-d btn-sm" onclick="removeSignature()" style="margin-left:10px;vertical-align:middle">Remove</button>
+    </div>
+   </div>
+   <!-- Danger Zone -->
    <div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Danger Zone</div>
+    <div class="set-section-title">Danger Zone</div>
     <button class="btn btn-d" onclick="clearAllData()">🗑 Delete All Data</button>
    </div>
   </div>
@@ -884,12 +945,115 @@ function toggleTheme(){
   document.getElementById('theme-btn').textContent=l?'🌙':'☀️';
   localStorage.setItem('af_theme',h.dataset.theme);
 }
-(function(){var t=localStorage.getItem('af_theme');if(t){document.documentElement.dataset.theme=t;if(t==='light')document.getElementById('theme-btn').textContent='☀️'}})();
+(function(){var t=localStorage.getItem('af_theme');if(t){document.documentElement.dataset.theme=t;document.getElementById('theme-btn').textContent=t==='light'?'☀️':'🌙';}})();
 
 // ── Settings ──
-function openSettings(){document.getElementById('set-apikey').value=settings.dvlaKey||'';document.getElementById('set-biz').value=settings.biz||'';document.getElementById('settings-modal').classList.add('open')}
+// ── Logo & Signature ──
+var _sigDrawing=false,_sigCtx=null,_sigLX=0,_sigLY=0,_sigInited=false;
+
+function resizeImage(file,maxW,maxH,cb){
+  var r=new FileReader();
+  r.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var ratio=Math.min(maxW/img.width,maxH/img.height,1);
+      var w=Math.round(img.width*ratio),h=Math.round(img.height*ratio);
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.85));
+    };img.src=e.target.result;
+  };r.readAsDataURL(file);
+}
+
+function logoUpload(e){
+  var f=e.target.files[0];if(!f)return;
+  resizeImage(f,400,120,function(b64){settings.logo=b64;_refreshLogoPreview();});
+}
+function removeLogo(){settings.logo='';_refreshLogoPreview();}
+function _refreshLogoPreview(){
+  var img=document.getElementById('set-logo-preview');
+  var btn=document.getElementById('remove-logo-btn');
+  if(settings.logo){img.src=settings.logo;img.classList.add('show');btn.style.display='';}
+  else{img.src='';img.classList.remove('show');btn.style.display='none';}
+}
+
+function setSigTab(tab){
+  document.getElementById('sigtab-draw').classList.toggle('active',tab==='draw');
+  document.getElementById('sigtab-upload').classList.toggle('active',tab==='upload');
+  document.getElementById('sig-draw-panel').style.display=tab==='draw'?'':'none';
+  document.getElementById('sig-upload-panel').style.display=tab==='upload'?'':'none';
+  if(tab==='draw')setTimeout(_initSigCanvas,60);
+}
+
+function _initSigCanvas(){
+  if(_sigInited)return;
+  var canvas=document.getElementById('sig-canvas');
+  if(!canvas)return;
+  _sigInited=true;
+  var dpr=window.devicePixelRatio||1;
+  var w=canvas.parentElement.clientWidth||400;
+  canvas.width=w*dpr;canvas.height=130*dpr;
+  canvas.style.width=w+'px';canvas.style.height='130px';
+  _sigCtx=canvas.getContext('2d');
+  _sigCtx.scale(dpr,dpr);
+  _sigCtx.strokeStyle='#111';_sigCtx.lineWidth=2.5;_sigCtx.lineCap='round';_sigCtx.lineJoin='round';
+  _sigCtx.fillStyle='#fff';_sigCtx.fillRect(0,0,w,130);
+  function pos(e){var r=canvas.getBoundingClientRect();return e.touches?{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top}:{x:e.clientX-r.left,y:e.clientY-r.top};}
+  canvas.addEventListener('mousedown',function(e){_sigDrawing=true;var p=pos(e);_sigLX=p.x;_sigLY=p.y;});
+  canvas.addEventListener('mousemove',function(e){if(!_sigDrawing)return;var p=pos(e);_sigCtx.beginPath();_sigCtx.moveTo(_sigLX,_sigLY);_sigCtx.lineTo(p.x,p.y);_sigCtx.stroke();_sigLX=p.x;_sigLY=p.y;});
+  canvas.addEventListener('mouseup',function(){_sigDrawing=false;});
+  canvas.addEventListener('mouseleave',function(){_sigDrawing=false;});
+  canvas.addEventListener('touchstart',function(e){e.preventDefault();_sigDrawing=true;var p=pos(e);_sigLX=p.x;_sigLY=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',function(e){e.preventDefault();if(!_sigDrawing)return;var p=pos(e);_sigCtx.beginPath();_sigCtx.moveTo(_sigLX,_sigLY);_sigCtx.lineTo(p.x,p.y);_sigCtx.stroke();_sigLX=p.x;_sigLY=p.y;},{passive:false});
+  canvas.addEventListener('touchend',function(){_sigDrawing=false;});
+}
+
+function sigClear(){
+  if(!_sigCtx)return;
+  var c=document.getElementById('sig-canvas');
+  _sigCtx.fillStyle='#fff';_sigCtx.fillRect(0,0,c.width,c.height);
+}
+function sigSave(){
+  var c=document.getElementById('sig-canvas');if(!c||!_sigCtx)return;
+  settings.signature=c.toDataURL('image/png');
+  _refreshSigPreview();
+}
+function sigUpload(e){
+  var f=e.target.files[0];if(!f)return;
+  resizeImage(f,400,150,function(b64){settings.signature=b64;_refreshSigPreview();});
+}
+function removeSignature(){settings.signature='';_refreshSigPreview();}
+function _refreshSigPreview(){
+  var wrap=document.getElementById('sig-current-wrap');
+  var img=document.getElementById('sig-current-img');
+  if(settings.signature){wrap.classList.add('show');img.src=settings.signature;}
+  else{wrap.classList.remove('show');img.src='';}
+}
+
+function _applyReportAssets(){
+  ['rpt','pi'].forEach(function(p){
+    var logo=document.getElementById(p+'-logo');
+    if(logo){if(settings.logo){logo.src=settings.logo;logo.style.display='block';}else{logo.style.display='none';}}
+    var sigImg=document.getElementById(p+'-sig-img');
+    var sigLine=document.getElementById(p+'-sig-line');
+    if(sigImg){if(settings.signature){sigImg.src=settings.signature;sigImg.style.display='block';if(sigLine)sigLine.style.display='none';}else{sigImg.style.display='none';if(sigLine)sigLine.style.display='';}}
+  });
+}
+
+function openSettings(){
+  document.getElementById('set-apikey').value=settings.dvlaKey||'';
+  document.getElementById('set-biz').value=settings.biz||'';
+  _sigInited=false; // allow re-init if modal was closed and re-opened
+  _refreshLogoPreview();_refreshSigPreview();
+  document.getElementById('settings-modal').classList.add('open');
+  setTimeout(_initSigCanvas,120);
+}
 function closeSettings(){document.getElementById('settings-modal').classList.remove('open')}
-function saveSettings(){settings.dvlaKey=(document.getElementById('set-apikey').value||'').trim();settings.biz=(document.getElementById('set-biz').value||'').trim();sv('settings');closeSettings()}
+function saveSettings(){
+  settings.dvlaKey=(document.getElementById('set-apikey').value||'').trim();
+  settings.biz=(document.getElementById('set-biz').value||'').trim();
+  sv('settings');closeSettings();
+}
 function clearAllData(){if(!confirm('Delete ALL data? Cannot be undone.'))return;cars=[];parts=[];sv('cars');sv('parts');refreshAll();closeSettings()}
 
 // ── Refresh ──
@@ -924,6 +1088,7 @@ function loadPageReport(carId){
   piDefects=c.defects?c.defects.slice():[];
   ph.style.display='none';rpt.style.display='block';pb.style.display='';
   document.getElementById('pi-biz').textContent=settings.biz||'AutoFlip';
+  _applyReportAssets();
   document.getElementById('pi-num').textContent='Ref: RPT-'+(c.plate||'XX')+'-'+new Date().toISOString().slice(0,10).replace(/-/g,'');
   document.getElementById('pi-date').textContent='Date: '+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('pi-plate').textContent=c.plate||'—';
@@ -1358,6 +1523,7 @@ function openReport(carId){
   if(!c)return;
   rptDefects=c.defects?c.defects.slice():[];
   document.getElementById('rpt-biz').textContent=settings.biz||'AutoFlip';
+  _applyReportAssets();
   document.getElementById('rpt-num').textContent='Ref: RPT-'+c.plate+'-'+new Date().toISOString().slice(0,10).replace(/-/g,'');
   document.getElementById('rpt-date').textContent='Date: '+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('rpt-plate').textContent=c.plate||'—';
@@ -1532,8 +1698,9 @@ function importData(e){
   var r=new FileReader();
   r.onload=function(ev){
     try{var d=JSON.parse(ev.target.result);
-      if(d.cars){cars=d.cars;sv('cars')}
-      if(d.parts){parts=d.parts;sv('parts')}
+      if(d.cars)cars=d.cars;
+      if(d.parts)parts=d.parts;
+      sv();
       refreshAll();alert('Imported successfully!');
     }catch(err){alert('Invalid backup file.')}
   };
@@ -1573,6 +1740,7 @@ function setAuthMode(mode){
     document.getElementById('auth-switch').innerHTML='No account yet? <a onclick="setAuthMode(\'create\')">Create one</a>';
     document.getElementById('auth-login-id').value='';
     document.getElementById('auth-login-pw').value='';
+    document.getElementById('auth-error').textContent='';
   }
 }
 
@@ -1657,9 +1825,17 @@ function startSession(username){
   sessionStorage.setItem('af2_user',username);
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('nav-username').textContent=username;
+  // Apply saved theme
+  var t=localStorage.getItem('af_theme');
+  if(t){
+    document.documentElement.dataset.theme=t;
+    document.getElementById('theme-btn').textContent=t==='light'?'☀️':'🌙';
+  }
   loadUserData(username).then(function(){
-    var t=localStorage.getItem('af_theme');
-    if(t){document.documentElement.dataset.theme=t;if(t==='light')document.getElementById('theme-btn').textContent='☀️'}
+    refreshAll();
+  }).catch(function(err){
+    console.error('Failed to load data:',err);
+    // Show app anyway with empty data
     refreshAll();
   });
 }
