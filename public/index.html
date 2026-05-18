@@ -1192,19 +1192,16 @@ function lookupPlate(){
   var btn=document.getElementById('lookup-btn');
   btn.textContent='…';btn.disabled=true;
   setLS('Looking up '+plate+'…','var(--muted)');
-  // DVLA VES API requires server-side call — use a CORS proxy for browser requests
+  // DVLA VES API is CORS-restricted — try multiple proxies in sequence
   var dvlaEndpoint='https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles';
-  var proxyUrl='https://corsproxy.io/?url='+encodeURIComponent(dvlaEndpoint);
-  fetch(proxyUrl,{
-    method:'POST',
-    headers:{'x-api-key':settings.dvlaKey,'Content-Type':'application/json'},
-    body:JSON.stringify({registrationNumber:plate})
-  }).then(function(r){
-    if(r.status===404)throw new Error('Plate not found — check the registration');
-    if(r.status===403)throw new Error('API key rejected — check your key in ⚙ Settings');
-    if(!r.ok)throw new Error('DVLA returned '+r.status+' — try again');
-    return r.json();
-  }).then(function(d){
+  var reqBody=JSON.stringify({registrationNumber:plate});
+  var proxies=[
+    'https://corsproxy.io/?url='+encodeURIComponent(dvlaEndpoint),
+    'https://thingproxy.freeboard.io/fetch/'+dvlaEndpoint,
+    'https://api.codetabs.com/v1/proxy?quest='+dvlaEndpoint,
+    'https://cors-anywhere.herokuapp.com/'+dvlaEndpoint
+  ];
+  function _dvlaFill(d){
     document.getElementById('car-make').value=d.make?cap(d.make):'';
     document.getElementById('car-year').value=d.yearOfManufacture||'';
     document.getElementById('car-colour').value=cap(d.colour||'');
@@ -1215,9 +1212,24 @@ function lookupPlate(){
     if(d.motExpiryDate)document.getElementById('car-mot').value=d.motExpiryDate;
     setLS('✓ Found: '+cap(d.make||'')+' '+(d.yearOfManufacture||'')+' — enter Model and Mileage manually','var(--accent)');
     document.getElementById('car-model').focus();
-  }).catch(function(e){
-    setLS('✗ '+e.message,'var(--red)');
-  }).finally(function(){btn.textContent='▶ Lookup';btn.disabled=false});
+    btn.textContent='▶ Lookup';btn.disabled=false;
+  }
+  function tryProxy(i){
+    if(i>=proxies.length){
+      btn.textContent='▶ Lookup';btn.disabled=false;
+      setLS('✗ Lookup failed — make sure your API key is the Primary/Secondary Key from the DVLA portal subscription page, not the Application ID','var(--red)');
+      return;
+    }
+    setLS('Trying… ('+(i+1)+'/'+proxies.length+')','var(--muted)');
+    fetch(proxies[i],{method:'POST',headers:{'x-api-key':settings.dvlaKey,'Content-Type':'application/json'},body:reqBody})
+    .then(function(r){
+      if(r.status===404){btn.textContent='▶ Lookup';btn.disabled=false;setLS('✗ Plate not found — double-check the registration','var(--red)');return;}
+      if(r.status===401||r.status===403){btn.textContent='▶ Lookup';btn.disabled=false;setLS('✗ API key rejected — make sure you copied the Primary Key (not App ID) from the DVLA portal','var(--red)');return;}
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json().then(_dvlaFill);
+    }).catch(function(){tryProxy(i+1);});
+  }
+  tryProxy(0);
 }
 function setLS(msg,col){var el=document.getElementById('lookup-status');el.textContent=msg;el.style.color=col||''}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():''}
