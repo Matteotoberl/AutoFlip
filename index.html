@@ -1192,23 +1192,28 @@ function lookupPlate(){
   var btn=document.getElementById('lookup-btn');
   btn.textContent='…';btn.disabled=true;
   setLS('Looking up '+plate+'…','var(--muted)');
-  fetch('https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles',{
+  // DVLA VES API requires server-side call — use a CORS proxy for browser requests
+  var dvlaEndpoint='https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles';
+  var proxyUrl='https://corsproxy.io/?url='+encodeURIComponent(dvlaEndpoint);
+  fetch(proxyUrl,{
     method:'POST',
     headers:{'x-api-key':settings.dvlaKey,'Content-Type':'application/json'},
     body:JSON.stringify({registrationNumber:plate})
   }).then(function(r){
-    if(!r.ok)throw new Error('HTTP '+r.status+' — check your API key or the plate');
+    if(r.status===404)throw new Error('Plate not found — check the registration');
+    if(r.status===403)throw new Error('API key rejected — check your key in ⚙ Settings');
+    if(!r.ok)throw new Error('DVLA returned '+r.status+' — try again');
     return r.json();
   }).then(function(d){
-    document.getElementById('car-make').value=d.make||'';
+    document.getElementById('car-make').value=d.make?cap(d.make):'';
     document.getElementById('car-year').value=d.yearOfManufacture||'';
     document.getElementById('car-colour').value=cap(d.colour||'');
     var f=cap(d.fuelType||''),sel=document.getElementById('car-fuel');
     var opt=Array.from(sel.options).find(function(o){return o.value.toLowerCase()===f.toLowerCase()});
     sel.value=opt?opt.value:'';
     document.getElementById('car-cc').value=d.engineCapacity||'';
-    document.getElementById('car-mot').value=d.motExpiryDate||'';
-    setLS('✓ Found: '+(d.make||'')+' '+(d.yearOfManufacture||'')+' — enter Model and Mileage manually','var(--accent)');
+    if(d.motExpiryDate)document.getElementById('car-mot').value=d.motExpiryDate;
+    setLS('✓ Found: '+cap(d.make||'')+' '+(d.yearOfManufacture||'')+' — enter Model and Mileage manually','var(--accent)');
     document.getElementById('car-model').focus();
   }).catch(function(e){
     setLS('✗ '+e.message,'var(--red)');
