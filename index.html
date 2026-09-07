@@ -365,6 +365,10 @@ textarea{resize:vertical;min-height:64px}
      <label>Confirm Password</label>
      <input type="password" id="auth-pw2" placeholder="Repeat password" onkeydown="if(event.key==='Enter')authSubmit()">
     </div>
+    <div class="auth-field">
+     <label>Early Access Code</label>
+     <input type="text" id="auth-access-code" placeholder="Enter code from M&amp;K Brothers" autocomplete="off" onkeydown="if(event.key==='Enter')authSubmit()">
+    </div>
    </div>
    <!-- Login fields -->
    <div id="auth-login-fields" style="display:none">
@@ -791,7 +795,8 @@ textarea{resize:vertical;min-height:64px}
    <div class="set-section">
     <div class="set-section-title">Business</div>
     <div class="fl" style="margin-bottom:12px"><label>Business / Company Name (shown on reports)</label><input type="text" id="set-biz" placeholder="e.g. M&amp;K Brothers Repair"></div>
-    <div class="fl"><label>Technician Name (shown on reports)</label><input type="text" id="set-tech" placeholder="e.g. Mohammed Khan"></div>
+    <div class="fl" style="margin-bottom:12px"><label>Technician Name (shown on reports)</label><input type="text" id="set-tech" placeholder="e.g. Mohammed Khan"></div>
+    <div class="fl"><label>Early Access Code (share with testers to let them sign up)</label><input type="text" id="set-early-code" placeholder="e.g. MKBETA" autocomplete="off"></div>
    </div>
    <!-- Logo -->
    <div class="set-section">
@@ -1068,6 +1073,7 @@ function openSettings(){
   document.getElementById('set-apikey').value=settings.dvlaKey||'';
   document.getElementById('set-biz').value=settings.biz||'';
   document.getElementById('set-tech').value=settings.tech||'';
+  document.getElementById('set-early-code').value=settings.earlyCode||'MKBETA';
   _sigInited=false; // allow re-init if modal was closed and re-opened
   _refreshLogoPreview();_refreshSigPreview();
   document.getElementById('settings-modal').classList.add('open');
@@ -1078,6 +1084,7 @@ function saveSettings(){
   settings.dvlaKey=(document.getElementById('set-apikey').value||'').trim();
   settings.biz=(document.getElementById('set-biz').value||'').trim();
   settings.tech=(document.getElementById('set-tech').value||'').trim();
+  settings.earlyCode=(document.getElementById('set-early-code').value||'').trim()||'MKBETA';
   sv();closeSettings();
 }
 function clearAllData(){if(!confirm('Delete ALL data? Cannot be undone.'))return;cars=[];parts=[];sv('cars');sv('parts');refreshAll();closeSettings()}
@@ -1779,6 +1786,7 @@ function setAuthMode(mode){
     document.getElementById('auth-phone').value='';
     document.getElementById('auth-pw').value='';
     document.getElementById('auth-pw2').value='';
+    document.getElementById('auth-access-code').value='';
   } else {
     document.getElementById('auth-title').textContent='Log In';
     document.getElementById('auth-create-fields').style.display='none';
@@ -1837,51 +1845,36 @@ function authSubmit(){
     if(!phone){errEl.textContent='Enter a phone number.';return}
     if(!pw||pw.length<6){errEl.textContent='Password must be at least 6 characters.';return}
     if(pw!==pw2){errEl.textContent='Passwords do not match.';return}
+    var accessCode=(document.getElementById('auth-access-code').value||'').trim();
+    var validCode=(settings.earlyCode||'MKBETA').toUpperCase();
+    if(accessCode.toUpperCase()!==validCode){errEl.textContent='Invalid early access code. Get yours from M&K Brothers.';return}
     btn.textContent='Creating…';btn.disabled=true;
-    var MAX_USERS=15;
-    // Count existing users then create account if under the cap
-    function _countUsers(){
+    hashPw(pw).then(function(hash){
       if(useFirestore&&db){
         return Promise.race([
-          db.collection('af2_accounts').get().then(function(s){return s.size;}),
-          _timeout(5000)
-        ]).catch(function(){return _lsAccounts().length;});
+          db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
+            if(doc.exists)throw new Error('Username already taken.');
+            return db.collection('af2_accounts').where('email','==',email).limit(1).get();
+          }).then(function(snap){
+            if(!snap.empty)throw new Error('Email already registered.');
+            return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
+          }).then(function(snap){
+            if(!snap.empty)throw new Error('Phone already registered.');
+            return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash,joinedAt:new Date().toISOString()});
+          }),
+          _timeout(6000)
+        ]).catch(function(err){
+          if(err.message==='timeout'){_lsCreateAccount(username,email,phone,hash);return;}
+          throw err;
+        });
+      } else {
+        _lsCreateAccount(username,email,phone,hash);
       }
-      return Promise.resolve(_lsAccounts().length);
-    }
-    _countUsers().then(function(count){
-      if(count>=MAX_USERS)throw new Error('Early access is full ('+MAX_USERS+'/'+MAX_USERS+' spots taken). Thanks for your interest!');
-      return hashPw(pw).then(function(hash){
-        if(useFirestore&&db){
-          return Promise.race([
-            db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
-              if(doc.exists)throw new Error('Username already taken.');
-              return db.collection('af2_accounts').where('email','==',email).limit(1).get();
-            }).then(function(snap){
-              if(!snap.empty)throw new Error('Email already registered.');
-              return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
-            }).then(function(snap){
-              if(!snap.empty)throw new Error('Phone already registered.');
-              return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash,spot:count+1,joinedAt:new Date().toISOString()});
-            }),
-            _timeout(6000)
-          ]).catch(function(err){
-            if(err.message==='timeout'){_lsCreateAccount(username,email,phone,hash);return;}
-            throw err;
-          });
-        } else {
-          _lsCreateAccount(username,email,phone,hash);
-        }
-      }).then(function(){
-        btn.textContent='Create Account';btn.disabled=false;
-        // Welcome message showing their spot number
-        var spot=count+1;
-        if(spot<=MAX_USERS){
-          errEl.style.color='#00aaff';
-          errEl.textContent='🎉 You\'re founding tester #'+spot+' of '+MAX_USERS+' — free forever!';
-        }
-        setTimeout(function(){startSession(username);},1800);
-      });
+    }).then(function(){
+      btn.textContent='Create Account';btn.disabled=false;
+      errEl.style.color='#00aaff';
+      errEl.textContent='🎉 Welcome, founding tester — you\'re in for free forever!';
+      setTimeout(function(){startSession(username);},1800);
     }).catch(function(err){
       errEl.style.color='';
       errEl.textContent=err.message||'Something went wrong.';
