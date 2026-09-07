@@ -340,6 +340,7 @@ textarea{resize:vertical;min-height:64px}
   <div class="auth-logo">Auto<em>Flip</em></div>
   <div class="auth-sub">M&amp;K Brothers Repair</div>
   <div id="auth-loading">Starting up…</div>
+  <div id="auth-early-access" style="display:none;background:rgba(0,170,255,.12);border:1px solid #00aaff;padding:10px 16px;margin-bottom:18px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#00aaff">🎉 Early Access — First 15 users get free access forever</div>
   <div class="auth-card" id="auth-card" style="display:none">
    <div class="auth-title" id="auth-title">Create Account</div>
    <!-- Create fields -->
@@ -1765,6 +1766,8 @@ function normalisePhone(p){return(p||'').replace(/[\s\-().+]/g,'').toLowerCase()
 function setAuthMode(mode){
   authMode=mode;
   document.getElementById('auth-error').textContent='';
+  var banner=document.getElementById('auth-early-access');
+  if(banner)banner.style.display=mode==='create'?'':'none';
   if(mode==='create'){
     document.getElementById('auth-title').textContent='Create Account';
     document.getElementById('auth-create-fields').style.display='';
@@ -1835,34 +1838,52 @@ function authSubmit(){
     if(!pw||pw.length<6){errEl.textContent='Password must be at least 6 characters.';return}
     if(pw!==pw2){errEl.textContent='Passwords do not match.';return}
     btn.textContent='Creating…';btn.disabled=true;
-    hashPw(pw).then(function(hash){
+    var MAX_USERS=15;
+    // Count existing users then create account if under the cap
+    function _countUsers(){
       if(useFirestore&&db){
         return Promise.race([
-          db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
-            if(doc.exists)throw new Error('Username already taken.');
-            return db.collection('af2_accounts').where('email','==',email).limit(1).get();
-          }).then(function(snap){
-            if(!snap.empty)throw new Error('Email already registered.');
-            return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
-          }).then(function(snap){
-            if(!snap.empty)throw new Error('Phone already registered.');
-            return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash});
-          }),
-          _timeout(6000)
-        ]).catch(function(err){
-          if(err.message==='timeout'){
-            // Firestore timed out — save to localStorage
-            _lsCreateAccount(username,email,phone,hash);return;
-          }
-          throw err;
-        });
-      } else {
-        _lsCreateAccount(username,email,phone,hash);
+          db.collection('af2_accounts').get().then(function(s){return s.size;}),
+          _timeout(5000)
+        ]).catch(function(){return _lsAccounts().length;});
       }
-    }).then(function(){
-      btn.textContent='Create Account';btn.disabled=false;
-      startSession(username);
+      return Promise.resolve(_lsAccounts().length);
+    }
+    _countUsers().then(function(count){
+      if(count>=MAX_USERS)throw new Error('Early access is full ('+MAX_USERS+'/'+MAX_USERS+' spots taken). Thanks for your interest!');
+      return hashPw(pw).then(function(hash){
+        if(useFirestore&&db){
+          return Promise.race([
+            db.collection('af2_accounts').doc(username.toLowerCase()).get().then(function(doc){
+              if(doc.exists)throw new Error('Username already taken.');
+              return db.collection('af2_accounts').where('email','==',email).limit(1).get();
+            }).then(function(snap){
+              if(!snap.empty)throw new Error('Email already registered.');
+              return db.collection('af2_accounts').where('phone','==',phone).limit(1).get();
+            }).then(function(snap){
+              if(!snap.empty)throw new Error('Phone already registered.');
+              return db.collection('af2_accounts').doc(username.toLowerCase()).set({username:username,email:email,phone:phone,hash:hash,spot:count+1,joinedAt:new Date().toISOString()});
+            }),
+            _timeout(6000)
+          ]).catch(function(err){
+            if(err.message==='timeout'){_lsCreateAccount(username,email,phone,hash);return;}
+            throw err;
+          });
+        } else {
+          _lsCreateAccount(username,email,phone,hash);
+        }
+      }).then(function(){
+        btn.textContent='Create Account';btn.disabled=false;
+        // Welcome message showing their spot number
+        var spot=count+1;
+        if(spot<=MAX_USERS){
+          errEl.style.color='#00aaff';
+          errEl.textContent='🎉 You\'re founding tester #'+spot+' of '+MAX_USERS+' — free forever!';
+        }
+        setTimeout(function(){startSession(username);},1800);
+      });
     }).catch(function(err){
+      errEl.style.color='';
       errEl.textContent=err.message||'Something went wrong.';
       btn.textContent='Create Account';btn.disabled=false;
     });
@@ -1949,8 +1970,10 @@ function _showAuth(mode){
   setAuthMode(mode);
   var loading=document.getElementById('auth-loading');
   var card=document.getElementById('auth-card');
+  var banner=document.getElementById('auth-early-access');
   if(loading)loading.style.display='none';
   if(card)card.style.display='';
+  if(banner)banner.style.display=mode==='create'?'':'none';
   document.getElementById('auth-screen').style.display='flex';
 }
 
